@@ -101,7 +101,7 @@ void escrever_arquivo(REG registro){
 
 void inserir(){
     REG registro;
-    int resto,resto1;
+    int resto=0,resto1=0;
     int tentativa = 0;
     int pos;
     FILE *hash;
@@ -128,6 +128,21 @@ void inserir(){
     resto= hash_func(registro.ISBN);
     resto1 = resto;
     while(resto<31){
+        if(tentativa>30){
+            printf("Nao e possivel inserir mais no arquivo hash\n");
+            fclose(hash);
+            fclose(main);
+            return;
+        }
+        if(resto ==30){
+            fseek(hash,((resto*18)+14),SEEK_SET);
+            fread(&pos,sizeof(int),1,hash);
+            if(pos>=0){
+                resto =0;
+                resto1 = 300;
+                tentativa = 1;
+            }
+        }
         fseek(hash,((resto*18)+14),SEEK_SET);
         fread(&pos,sizeof(int),1,hash);
         if(((pos ==-1) || (pos==-2)) && (resto == resto1)){
@@ -157,13 +172,8 @@ void inserir(){
         tentativa++;
         resto++;
     }
-
-
-    //fwrite(registro.ISBN,sizeof(registro.ISBN),1,hash);
-    printf("Nao foi possivel inserir\n");
-    fclose(hash);
-    fclose(main);
 }
+
 
 
 void criar_hash(){
@@ -220,9 +230,16 @@ void remover(){
             resto = hash_func(aux);
 
             while(resto<31) {
+                if(resto ==30){
+                    fseek(hash,((resto*18)),SEEK_SET);
+                    fread(&ISBN,sizeof(char),14,hash);
+                    if(strcmp(ISBN,aux)!=0){
+                        resto =0;
+                    }
+                }
                 fseek(hash, ((resto * 18) + 14), SEEK_SET);
                 fread(&pos, sizeof(int), 1, hash);
-                if ((pos != -1) || (pos != -2)) {
+                if (pos>=0) {
                     fseek(hash, -18, SEEK_CUR);
                     fread(&ISBN, sizeof(char), 14, hash);
                     if(strcmp(ISBN,aux)==0){
@@ -240,6 +257,17 @@ void remover(){
                     }
                 }
                 resto++;
+                if(pos==-1){
+                    aux1[0] = '/';
+                    fseek(remove,14*contador1,SEEK_SET);
+                    fwrite(aux1,sizeof(aux),1,remove);
+                    printf("Nao Encontra ISBN para remover\n");
+                    fclose(remove);
+                    fclose(out);
+                    fclose(hash);
+                    return;
+                }
+
             }
             aux1[0] = '/';
             fseek(remove,14*contador1,SEEK_SET);
@@ -275,6 +303,14 @@ void buscar(){
             strcpy(aux1,aux);
             resto = hash_func(aux);
             while(resto<31) {
+                if(resto ==30){
+                    fseek(hash,((resto*18)),SEEK_SET);
+                    fread(&ISBN,sizeof(char),14,hash);
+                    if(strcmp(ISBN,aux)!=0){
+                        resto =0;
+                        acesso = 1;
+                    }
+                }
                 fseek(hash, ((resto * 18) + 14), SEEK_SET);
                 fread(&pos, sizeof(int), 1, hash);
                 if(pos ==-1){
@@ -287,7 +323,7 @@ void buscar(){
                     fclose(hash);
                     return;
                 }
-                if (pos != -1 || pos != -2) {
+                if (pos>=0) {
                     fseek(hash, -18, SEEK_CUR);
                     fread(&ISBN, sizeof(char), 14, hash);
                     if(strcmp(ISBN,aux)==0){
