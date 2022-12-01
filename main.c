@@ -277,10 +277,30 @@ void buscar(){
             while(resto<31) {
                 fseek(hash, ((resto * 18) + 14), SEEK_SET);
                 fread(&pos, sizeof(int), 1, hash);
-                if ((pos != -1) || (pos != -2)) {
+                if(pos ==-1){
+                    printf("Chave %s nao encontrada\n",aux1);
+                    aux1[0] = '/';
+                    fseek(busca,14*contador1,SEEK_SET);
+                    fwrite(aux1,sizeof(aux),1,busca);
+                    fclose(busca);
+                    fclose(out);
+                    fclose(hash);
+                    return;
+                }
+                if (pos != -1 || pos != -2) {
                     fseek(hash, -18, SEEK_CUR);
                     fread(&ISBN, sizeof(char), 14, hash);
                     if(strcmp(ISBN,aux)==0){
+                        if(pos ==-2){
+                            printf("Chave %s nao encontrada\n",aux1);
+                            aux1[0] = '/';
+                            fseek(busca,14*contador1,SEEK_SET);
+                            fwrite(aux1,sizeof(aux),1,busca);
+                            fclose(busca);
+                            fclose(out);
+                            fclose(hash);
+                            return;
+                        }
                         printf("Chave %s encontrada, endereco %d, %d acesso\n",ISBN,resto,acesso);
                         printf("POS: %d \n",pos);
                         pegar_isbn_pos(pos);
