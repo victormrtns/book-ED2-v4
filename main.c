@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+
 typedef struct Livro
 {
     char ISBN[14];
@@ -59,18 +61,33 @@ int main() {
 }
 REG pegar_registro() {
 
-    FILE *insere;
-    char aux[14];
+    FILE *insere,*hash;
+    int resto;
+    char aux[14],ISBN[14];
     REG registro;
     insere = fopen("insere.bin", "rb+");
     int contador = 0;
-
+    if((hash = fopen("hash.bin","r+b")) == NULL ){
+        printf("Criar Arquivo hash.bin\n");
+        criar_hash();
+    }
     // le no insere.bin registro a inserir e escreve no final do arq main.bin string formatada com todos os dados
     while (fread(&registro, sizeof(REG), 1, insere)) {
         sprintf(aux, "%s", registro.ISBN);
 
         // quando acha isbn q ainda nao leu recupera os dados
         if (aux[0] != '/') {
+            resto = hash_func(aux);
+            fseek(hash,((resto*18)),SEEK_SET);
+            fread(&ISBN,sizeof(char),14,hash);
+            fclose(hash);
+            if(strcmp(ISBN,aux)==0){
+                aux[0] = '/';
+                fseek(insere,sizeof(REG)*contador,SEEK_SET);
+                fwrite(aux,sizeof(aux),1,insere);
+                fclose(insere);
+                return registro;
+            }
             escrever_arquivo(registro);
             // copia isbn, volta no comeco para posicionar no arquivo do comeco do registro pra pegar todos os dados
             fseek(insere,sizeof(REG)*contador,SEEK_SET);
@@ -104,6 +121,7 @@ void inserir(){
     int resto=0,resto1=0;
     int tentativa = 0;
     int pos;
+    char ISBN[14];
     FILE *hash;
     FILE *main;
     int contador = 0;
@@ -132,6 +150,12 @@ void inserir(){
             printf("Nao e possivel inserir mais no arquivo hash\n");
             fclose(hash);
             fclose(main);
+            return;
+        }
+        fseek(hash,((resto*18)),SEEK_SET);
+        fread(&ISBN,sizeof(char),14,hash);
+        if(strcmp(ISBN,registro.ISBN)==0){
+            printf("Ja existe o que deseja inserir!\n");
             return;
         }
         if(resto ==30){
@@ -197,15 +221,11 @@ void criar_hash(){
 }
 
 int hash_func(char *isbn){
-    const int tam_isbn = 14;
-    int soma=0,i;
-    int resto;
+    int soma;
     printf("ISBN que passara pela func hash: %s\n",isbn);
-    for(i=0;i<tam_isbn;i++){
-        soma +=(int)isbn[i];
-    }
-    resto = soma % 31;
-    return resto;
+
+    soma = (int)(atoll(isbn) % 31);
+    return soma;
 
 }
 
@@ -286,7 +306,7 @@ void buscar(){
     FILE *out,*busca,*hash;
     char aux[14],ISBN[14],aux1[14];
     int contador = 0;
-    int acesso =1;
+    int acesso =0;
     int contador1;
     int resto;
     int pos;
